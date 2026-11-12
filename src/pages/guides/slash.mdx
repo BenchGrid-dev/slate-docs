@@ -1,0 +1,49 @@
+---
+description: Build and run Slash on Linux or macOS with Claude Code or Codex, without installing the SlateOS desktop.
+---
+
+# Use Slash on Linux or macOS
+
+Slash is a conversational shell you can run in your existing terminal. Type a request for your agent, or prefix a command with `!` to run it yourself. You can try Slash alongside your usual shell without changing your login shell or desktop.
+
+## Before you start
+
+- A Linux or macOS terminal with Git, a stable Rust toolchain (`cargo`), and a C compiler and linker.
+- An installed and authenticated Claude Code or Codex CLI. Complete sign-in in that CLI first and make sure `command -v claude` or `command -v codex` finds the one you plan to use.
+
+## Build and launch
+
+```sh
+git clone https://github.com/BenchGrid-dev/slate.git
+cd slate
+cargo build --locked -p slash
+./target/debug/slash
+```
+
+Claude Code is the default backend. If you use Codex, enter `/agent codex` at the Slash prompt before sending a task. `/agent` shows the current backend. Switching backends starts a new agent session.
+
+To make `slash` available outside the checkout, run `cargo install --locked --path crates/slash` from the repository root and ensure Cargo’s binary directory (normally `~/.cargo/bin`) is on your `PATH`.
+
+## Your first session
+
+| Input at the Slash prompt | What it does |
+| --- | --- |
+| `Explain how this repository is organized.` | Send a request to your agent. |
+| `!pwd` or `!git status` | Run a command yourself in your regular shell. |
+| `/help` | List Slash commands. |
+| `/new` | Start a fresh agent session. |
+| `/exit` | Return to the terminal shell you launched Slash from. |
+
+Run Slash from the directory you want to work in, or use `/cd path` to move to another directory. Slash can include the output of recent `!` commands in the next agent turn.
+
+## Choose a default backend
+
+Add `backend = "codex"` to your Slash configuration to start with Codex each time. Use `backend = "claude"` for Claude Code. The config file is `~/.config/slate/slash.toml` on Linux (under `$XDG_CONFIG_HOME/slate/` if set) and `~/Library/Application Support/slate/slash.toml` on macOS. Keep any existing settings when editing it. See the [Slash reference](/reference/slash#config) for model and shell options.
+
+## What works with just the shell
+
+Plain-language requests and `!` commands work without the SlateOS desktop. When `slated` is unavailable, Slash still runs and your backend’s permission settings apply. Slate’s approval broker, task audit, and snapshot-based undo need `slated`; undo also needs a supported btrfs snapshot setup. Desktop control requires a compatible Linux Wayland session and the desktop integration.
+
+If the backend won’t start, check that its CLI runs and is signed in from the same terminal. If Slash warns that `slated` is unavailable in a shell-only setup, you can still use the shell.
+
+[Slash reference](/reference/slash) · [Try the full SlateOS desktop](/guides/getting-started#try-the-desktop-in-a-vm)

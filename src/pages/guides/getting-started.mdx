@@ -4,7 +4,7 @@ description: Try the SlateOS desktop in a VM or run Slash from source on Linux o
 
 # Getting started
 
-Try the [full desktop in a virtual machine](#try-the-desktop-in-a-vm), or start with the [Slash shell](#run-slash-from-source) on a computer you already use.
+Try the [full desktop in a virtual machine](#try-the-desktop-in-a-vm), or start with the [standalone Slash guide](/guides/slash) on a computer you already use.
 
 ## Try the desktop in a VM
 
@@ -23,15 +23,4 @@ After booting the installed system, sign in to an agent in **Settings → AI**. 
 
 ## Run Slash from source
 
-You need Linux or macOS, a stable Rust toolchain, a C toolchain and linker, and an installed, authenticated Claude Code or Codex CLI on your `PATH`.
-
-```sh
-git clone https://github.com/BenchGrid-dev/slate.git
-cd slate
-cargo build --workspace
-./target/debug/slash
-```
-
-Claude Code is the default backend. To switch to Codex, enter `/agent codex`. Type a task in plain language, run a shell command with `!` (for example, `!git status`), or type `/help` to see the available commands.
-
-Running Slash this way leaves your login shell and desktop configuration in place. Desktop control requires a compatible Linux Wayland session; see the [Shell reference](/reference/slash) and [desktop compatibility notes](/reference/desktop#toolkit-compatibility).
+You can run Slash in a terminal on Linux or macOS without installing the SlateOS desktop. Follow [Use Slash on Linux or macOS](/guides/slash) to build it, select a backend, and run your first task.

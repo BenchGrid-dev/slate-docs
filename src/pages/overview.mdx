@@ -1,7 +1,5 @@
 # SlateOS overview
 
-[简体中文](/zh-cn)
-
 **SlateOS is an open-source, agent-native Linux desktop built on NixOS.** It brings natural-language interaction, background computer use, and task-level controls into one system. Your agent can work across the terminal, desktop applications, and system configuration using the same environment you do.
 
 The central idea is simple: **an agent should have its own place on your desktop.** Slate gives it a dedicated Wayland input seat, connects it to the command line and applications, and provides infrastructure for approvals, audit records, and filesystem recovery. You choose the agent backend; Slate provides the environment in which it works.
@@ -73,7 +71,7 @@ The default backend is Claude Code. If you use Codex, enter `/agent codex` befor
 
 This runs the shell without changing your login shell or desktop. `slash` starts the companion `slated` daemon when available. Desktop control requires a compatible Linux Wayland session; file recovery requires the btrfs setup described [below](#execution-and-recovery).
 
-For backend options and shell behavior, see the [slash reference](/reference/slash). On Linux with Nix, `nix develop` provides the repository's development environment, and `nix build` builds the runtime package.
+For a complete shell-only walkthrough, see [Use Slash on Linux or macOS](/guides/slash). For backend options and shell behavior, see the [slash reference](/reference/slash). On Linux with Nix, `nix develop` provides the repository's development environment, and `nix build` builds the runtime package.
 
 ### Run the SlateOS desktop
 

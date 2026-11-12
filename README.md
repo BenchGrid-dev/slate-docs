@@ -24,7 +24,7 @@ See the [Vocs Vercel guide](https://vocs.dev/deployment/vercel) for details.
 
 ## Content and maintenance
 
-This site migrates the 43 public documentation files from [SlateOS `c658ecf`](https://github.com/BenchGrid-dev/slate/tree/c658ecfe1cddce9d44f8c674ef352ff37dcabe77), including the English and Chinese overviews, reference and developer guides, decisions, and all 18 OS Skills. The home page and getting-started guide provide entry points into that material.
+This site brings over the English documentation from [SlateOS `c658ecf`](https://github.com/BenchGrid-dev/slate/tree/c658ecfe1cddce9d44f8c674ef352ff37dcabe77), including the overview, reference and developer guides, decisions, and all 18 OS Skills. The home page and guides for SlateOS and standalone Slash provide entry points into that material.
 
 Edit the MDX files here for the published site. Keep bundled `SKILL.md` files and their `manifest.toml` files in the Slate repository: the installed runtime ships them from that tree. GitHub issue and pull request templates also stay there. Source-code links in the migrated documentation are pinned to the source revision where applicable.
 

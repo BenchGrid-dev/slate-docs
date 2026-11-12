@@ -24,6 +24,7 @@ export default defineConfig({
       items: [
         { text: 'Overview', link: '/overview' },
         { text: 'Getting started', link: '/guides/getting-started' },
+        { text: 'Use Slash on Linux or macOS', link: '/guides/slash' },
         { text: 'SlateOS on NixOS', link: '/guides/nixos' },
       ],
     },
@@ -51,10 +52,8 @@ export default defineConfig({
     },
     { text: 'Roadmap', link: '/roadmap' },
     { text: 'Changelog', link: '/changelog' },
-    { text: '简体中文', link: '/zh-cn' },
   ],
   topNav: [
-    { text: '简体中文', link: '/zh-cn' },
     { text: 'SlateOS', link: 'https://slate.benchgrid.dev' },
     { text: 'GitHub', link: 'https://github.com/BenchGrid-dev/slate' },
   ],
