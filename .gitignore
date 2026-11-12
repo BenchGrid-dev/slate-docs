@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vercel/
+.vocs/
+.waku/
+.DS_Store
+.env*
+!.env.example
