@@ -7,6 +7,7 @@ export default defineConfig({
   markdown: { output: { validation: 'fail' } },
   accentColor: 'light-dark(#28766b, #7dd2bd)',
   iconUrl: '/slate.svg',
+  logoUrl: { light: '/slate-wordmark-light.svg', dark: '/slate-wordmark-dark.svg' },
   head: {
     base: false,
     ...(process.env.VERCEL_ENV === 'preview' ? { meta: { robots: 'noindex, nofollow' } } : {}),
