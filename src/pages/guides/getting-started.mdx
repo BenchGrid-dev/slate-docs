@@ -1,0 +1,37 @@
+---
+description: Try the SlateOS desktop in a VM or run Slash from source on Linux or macOS.
+---
+
+# Getting started
+
+Try the [full desktop in a virtual machine](#try-the-desktop-in-a-vm), or start with the [Slash shell](#run-slash-from-source) on a computer you already use.
+
+## Try the desktop in a VM
+
+SlateOS has live images for x86_64 and aarch64. The [latest release](https://github.com/BenchGrid-dev/slate/releases/latest) lists supported configurations and known limitations. For v0.2.1, the images are built from the Nix flake; the release does not attach a ready-made ISO.
+
+On Linux with Nix and flakes enabled, build the image for the build machine’s architecture:
+
+```sh
+nix build 'github:BenchGrid-dev/slate/v0.2.1#iso'
+ls result/iso/
+```
+
+Boot the ISO in a VM with a matching architecture. Choose **Try SlateOS** to explore the live desktop. If you choose **Install SlateOS**, attach an empty virtual disk of at least 20 GB and check the selected disk before confirming: installation erases it.
+
+After booting the installed system, sign in to an agent in **Settings → AI**. Press **Super+s** to open the Slate prompt and give it a task. See the [NixOS guide](/guides/nixos#the-live-and-installer-image) for the installer, module options, and tested configurations.
+
+## Run Slash from source
+
+You need Linux or macOS, a stable Rust toolchain, a C toolchain and linker, and an installed, authenticated Claude Code or Codex CLI on your `PATH`.
+
+```sh
+git clone https://github.com/BenchGrid-dev/slate.git
+cd slate
+cargo build --workspace
+./target/debug/slash
+```
+
+Claude Code is the default backend. To switch to Codex, enter `/agent codex`. Type a task in plain language, run a shell command with `!` (for example, `!git status`), or type `/help` to see the available commands.
+
+Running Slash this way leaves your login shell and desktop configuration in place. Desktop control requires a compatible Linux Wayland session; see the [Shell reference](/reference/slash) and [desktop compatibility notes](/reference/desktop#toolkit-compatibility).

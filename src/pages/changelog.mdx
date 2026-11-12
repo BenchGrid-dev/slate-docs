@@ -1,0 +1,307 @@
+# Changelog
+
+Small releases, often. Patch releases are snapshots the maintainer can test; a minor release (`0.1.0`, `0.2.0`) marks a milestone the maintainer chooses. `0.0.x` were the development snapshots before the first one.
+
+## Unreleased
+
+## 0.2.1 — 2026-11-11
+
+SlateOS follows the NixOS release it is developed on, the image is installed and booted in virtual machines on both architectures, and an encrypted disk asks for its passphrase on the screen.
+
+- **SlateOS follows NixOS 26.05.** The flake pinned nixos-unstable (a revision of late September), while SlateOS is developed and tested on the stable release: the image and what it installed ran packages the end-to-end suites never saw, and got no security updates. The flake now follows `nixos-26.05`, the same revision the development system runs, and later 0.2.x releases move along that branch. A system installed from the 0.2.0 image changes to it when its copy of Slate (`/etc/slateos/slate`) is replaced.
+- **The image is installed and booted before a minor release.** `tests/image/install_test.py` starts the image in QEMU the way a person does, installs to an empty disk with `slateos-install` through a console of the live system, boots the disk without the image, types the disk's passphrase on the keyboard when the installation is encrypted, logs in and checks the desktop. A workflow (`.github/workflows/image.yml`) builds the x86_64 image and runs it, on a plain and on an encrypted disk, for the commit that prepares a minor release and on request; patch releases keep to the evaluation of both images.
+- slash shows a Markdown table as aligned columns, its header bold; it printed the rows with their pipes.
+- The system names itself with SlateOS's version: the boot menu's generations, the console greeting and `slateos-version` gave NixOS's ("26.11.20260926.e158d9e" on a system installed from the 0.2.0 image), which stays in `VERSION_ID` and, in brackets, in `slateos-version`.
+- The image no longer carries ZFS's kernel module, which SlateOS does not install on.
+- Fix: an encrypted disk's passphrase prompt did not show on ARM computers whose firmware names a serial port as the console (UTM, QEMU, servers): the kernel then used that port alone, the screen stayed black until the desktop started, and the passphrase could only be typed blind or on the serial port. The screen is now the console (`console=tty0`), on every architecture.
+- Fix: the dock could start with GTK's default icons at login, when it came up before the settings portal answered; it now sets the icon theme itself, as it does the colours.
+- Fix: each restart of the dock or the Slate prompt left a `swaymsg` process behind until the next window event. Both now read sway's events from its socket themselves.
+- Firefox no longer aborts when the agent reads its session-restore page (0.2.0's known limitation): not reproduced with Firefox 159, with and without a session to restore.
+
+Known limitations, where they differ from 0.2.0's:
+
+- Both images now install and boot in QEMU: x86_64 in CI, aarch64 on the development system under emulation. No image has been tried on real hardware, and the graphical installer has not been run on x86_64 (the test installs with `slateos-install`).
+- A system installed from the 0.2.0 image does not move to this release by itself; a software update that does is planned for 0.3.0.
+- On a very slow machine (an emulated one) the session's first terminal may not open; Super+Return opens one.
+
+## 0.2.0 — 2026-11-11
+
+The second milestone. SlateOS can be tried and installed from its image, with a graphical installer, and has what a computer needs day to day: Wi-Fi, Bluetooth, the battery and power modes, printers, input methods, apps from Flathub, and a screen that locks when you are away. The agent gets more of its own: Chromium-based apps it opens take its keyboard and pointer, you choose what it may do while the screen is locked, and a request from the Slate prompt arrives with what you are looking at. It is also the first release whose image builds; 0.1.0 and 0.1.1 had none.
+
+Upgrading from 0.1:
+
+- The screen now locks after 10 minutes without input and before the computer sleeps (0.1 locked only on Super+L); `services.slate.desktop.screenLock = false` turns that off.
+- With the desktop enabled, the module turns on NetworkManager, BlueZ, UPower, power-profiles-daemon, CUPS with Avahi and ipp-usb, polkit, Flatpak, AppImage, nix-ld, zram swap and redistributable firmware. Each is a default (`lib.mkDefault`, polkit excepted) that a configuration can turn off. NetworkManager cannot run alongside `networking.wireless`: a configuration that uses it sets `networking.networkmanager.enable = false` or moves its networks to NetworkManager.
+
+Changes since 0.1.1:
+
+- **Try or install, like other systems.** The image's boot menu is SlateOS's own (it showed nixpkgs' NixOS logo) and starts "Try or Install SlateOS 0.2.0"; the live desktop opens a window to try SlateOS or install it, and Install SlateOS stays in the dock. Installing is now graphical: choose the disk, your user name and password, the computer name, time zone, applications and disk encryption, review, confirm, and follow the progress (`slateos-installer`, which runs `slateos-install`). The Memtest86+ entry is gone on ARM, where the image has no Memtest and it only reported an error, and the text consoles no longer speak of a "nixos" account.
+- **The basics of a computer.** Settings has new pages: Network lists Wi-Fi networks and asks for their password (the password goes to NetworkManager over D-Bus, never on a command line; a failed attempt is not kept), Bluetooth pairs devices (it answers pairing requests with the code to confirm or type) and connects or forgets them, Power shows the battery and the power mode, and Printers lists printers and the default one. The menu bar shows the battery and Bluetooth when the computer has them, and its icons open their page (`slate-settings network`, `bluetooth`, `power`). The module now enables what these need on real hardware: redistributable firmware, zram swap, NetworkManager, BlueZ, UPower, power-profiles-daemon, CUPS with Avahi and ipp-usb (driverless printers work without being added; cups-browsed stays off), and a polkit agent (soteria). A notification warns when the battery reaches 10 % and 5 %.
+- **The screen locks when you are away**: after 10 minutes without input, and before the computer sleeps; it turns off after 15 (Settings, Power). What the agent does on its own screen does not count as activity. What the agent may do in windows while the screen is locked is yours to choose, in Settings, AI: look but not use them (the default), also press buttons, fill in fields and open and close windows through accessibility, or keep working with its keyboard and pointer behind the lock (a SwayFX patch exempts its seat from the lock; its input never reaches the lock screen, and it cannot unlock). You can also let the screen stay unlocked while the agent works; it then locks a minute after the agent stops. Loosening either asks you to confirm what it allows, and every change asks for your password, so the agent cannot change them itself (`slateos-settings set agent-while-locked`, `lock-while-agent-works`; `services.slate.desktop.agentWhileLocked`, `lockWhileAgentWorks`). A tool the choice does not allow explains why; none of them types into the lock screen.
+- **Electron and Chromium apps the agent opens take its own keyboard and pointer.** Chromium binds one Wayland seat, the first, so the agent had to borrow yours to type in VS Code, Obsidian or Chrome. A Chromium-based app it opens in the background now connects to a Wayland socket of the agent's (a security context), and a SwayFX patch shows it the agent's seat and no other (measured with Obsidian). Your mouse and keyboard do not reach such a window, so the agent is told to close it when done and to open apps you will use on your screen (`where: "here"`). Like Flatpak's, these apps get no privileged protocol. GTK 4 apps turned out not to need this: GTK 4.22 takes the agent seat's input when the seat existed before the app, as the desktop daemon makes sure (the slate-desktop README's table is corrected).
+- **Input methods, installed from Settings.** Settings, Keyboard adds Chinese (Pinyin or Rime), Japanese (Mozc) or Korean (Hangul): it asks for your password and updates the system; Ctrl+Space then switches. None is installed by default. The choice lives in `/etc/slateos/settings.json` (`services.slate.settingsFile`), which `slateos-settings` writes before it rebuilds; `services.slate.desktop.inputMethods` sets the same in the configuration. Each seat has its own input method state, so what the agent types is never converted by your Pinyin.
+- **Apps from Flathub.** Flatpak is set up with Flathub in each person's own installation, so installing an app needs no password, and Bazaar, a store for Flathub, is on the dock. AppImages run when opened, and downloaded Linux programs find the usual libraries (nix-ld). A new skill tells the agent where an app should come from.
+- **Installer.** `slateos-install --encrypt` puts the system inside LUKS2 and asks for the passphrase at every boot; `--apps minimal` installs the smaller application set. A complete encrypted install has now been run and booted (in QEMU, from the development system).
+- Windows that open larger than the space between the menu bar and the dock are fitted into it (a SwayFX patch); they were centred on the whole screen, their title bar under the menu bar.
+- New OS Skills: bluetooth, printing, power-battery and apps-flatpak; the system skill knows `slateos-settings`, and the windows skill the locked screen and input methods.
+- Fix: the screen lock did not lock when a seat's keyboard had no keymap: swaylock exited instead. The agent seat's keyboard on your seat had none after the desktop daemon restarted, and an input method's has none until it first forwards a key; Super+L then did nothing. slate-desktop now gives its keyboards a keymap at once, and the lock is swaylock-effects with a patch that ignores such a seat.
+- Fix: the configuration the installer wrote loaded the Slate flake from `/etc/slateos/slate`, which does not exist while `nixos-install` runs on the live system, so an install could not finish. It now loads it from next to the configuration, and keeps Settings' choices there too (an install took those of the machine it ran on).
+- Fix: the agent did not see a dialog that a GTK4 application had just opened (GTK4 caches its accessibility tree only as far as an assistive tool has asked); parts the cache lists fewer children of than they have are now read directly.
+- Fix: the agent did not find the accessibility tree of most Flatpak apps (Obsidian among them): it matches an app to its window by process, and the bus sees the D-Bus proxy of the app's sandbox instead. It now matches them by Flatpak instance. Measured with Flatseal (GTK4), Obsidian (Electron) and WeChat (no accessibility tree: screenshots and clicks); the slate-desktop README lists them.
+- Fix (SwayFX patch): any `seat` command at run time, `swaymsg reload` included, moved the agent's virtual pointer and keyboard to your seat, leaving the agent seat without input until the desktop daemon restarted. Devices a client created for its own transient seat now stay on it.
+- Fix: installing a Flatpak app after the first reported "Permission denied" for hicolor's `index.theme` (Flatpak's icon cache trigger copies it read-only out of the store).
+- **The Slate prompt sends what you are looking at.** When you open it, it notes the window you had in front of you, and while you type, slash reads your screen; your request then reaches the agent with the windows you can see (and those on its own screen), with ids it can use at once, and, when the request is about what is on screen ("summarize this page", "翻译这段"), that window's text and your text selection. The agent no longer spends turns listing windows and reading the page first: summarizing the page in Firefox went from three turns and 10 s to one turn and 3.6 s. Requests that are not about the screen carry only the window list. Desktop tools also take an 8-digit id prefix.
+- **Deleting what undo cannot bring back asks first.** A command that deletes or moves files was allowed after a snapshot even when the snapshot did not hold them: files outside the snapshot root (with `snapshotRoot` set to a folder inside the home directory), in caches undo leaves alone, or on a system without snapshots were gone for good, and `/undo` reported nothing to restore. slated now asks before such a command and says which path undo could not restore (docs/policy.md).
+- **Apps the agent opens in the background no longer take your keyboard for a moment.** A program started through a wrapper (LibreOffice's `soffice`, many Nix wrappers) opened its window on your screen, with your keyboard focus, for up to a second and a half before it was moved: what you typed meanwhile went into the agent's document. The processes such a program starts now get the same placement rule, so the window opens on the agent's screen, and a window that still lands on yours is moved before slate-desktop asks sway anything else. A dialog an app opens while the agent works in it on its screen ("Save Document?") stays there too, and `desktop_close` says when an app asks something before it closes instead of reporting it closed.
+- **The agent no longer pulls windows over from your other workspaces.** Asked to put "Firefox and the terminal" side by side, it took the terminal on another workspace, and sway brought it over. `desktop_windows` now gives each window on your screen its workspace and marks those on one you are not looking at (`on_hidden_workspace`), a window named by app or title is the one you can see when there are several, and `desktop_arrange` without a list arranges only what you can see.
+- A click on Allow or Deny in an approval that appeared on its own now answers it; the first click only woke the prompt up, so it took two.
+- The desktop prompt shows bullet lists and *italics* in answers (they were shown as `-` and `*`), and slash says "1 turn".
+- **Opening an app is quicker and says what went wrong.** The desktop and Slate tools are loaded with the agent instead of on first use (Claude Code's `alwaysLoad`), which saves the agent a round trip for every desktop tool it first uses in a session. `desktop_launch` waits up to 15 s for a program that is still starting (a first Flatpak start can take longer than the 8 s it waited), says so if it is still starting after that, and places its window where it was asked when it does appear; a program that exits before it shows a window is reported at once with its last output. Launched programs now write their output to the journal under their name (`journalctl --user -t com.tencent.WeChat`). A Flatpak app opened in the background is recognised by its window's name (`wechat` for `com.tencent.WeChat`) and moved there as soon as the window opens; it stayed on your screen until the launch was done waiting.
+- slash shows the agent's tool calls more plainly: desktop tools by their short names (`desktop_launch`), their arguments as `command: …, where: here` instead of JSON, window ids by their first eight digits, skills by name, and no line for Claude Code loading a tool's definition (`ToolSearch`).
+- The password dialog says who asks when Settings needs root, and the dock shows it with a padlock.
+- The session now holds `graphical-session.target` while it runs (`slateos-session.target`, stopped when sway exits), so units that start with a graphical session work, and the session's own services stop at logout.
+- Fix: the image could not be built since SwayFX 0.6 (0.1.0 and 0.1.1 had none): the override passed an argument the flake's newer nixpkgs no longer takes. CI now evaluates both images.
+- Fix: the live session locked itself after ten minutes away, and its user, who has no password, could not unlock it. The live image no longer locks the screen (`services.slate.desktop.screenLock`).
+- Fix: changing the resolution or scale in Settings could leave the screen unusable. When the confirmation ran out (or was closed), Settings went back without `--custom` to a mode the display does not list (UTM's 2560x1600), so sway fell back to another mode at the old scale: a quarter of the working area, every window larger than the screen, the dialog out of reach. It now restores the exact mode, closes the dialog, and answers once. The person's absolute pointer (a virtual machine's) is also mapped to the new screen size at once instead of up to 5 s later, so clicks land where the pointer is. Dialogs of Settings no longer show in the dock as an unknown app.
+- Fix: in a virtual machine (virtio-gpu: UTM, QEMU) the screen stayed dark once it had turned off after 15 minutes away, whatever you pressed. The display misses the first power on after a power off and still reports success; `slate-screens` now asks again until every screen is on.
+- Fix: installations failed while building the new system (`path '/mnt/etc/slateos/settings.json' does not exist`). The module copied `services.slate.settingsFile` into the store to name it in `/etc/slate/system-settings.json`, and a new system has no `settings.json` yet; it now writes the path as text. Running the installer from the image itself also found three more faults, now fixed: the copied Slate source was a link into the image's read-only store, `nixos-install` built the live system's configuration instead of the new one ("no build method found"), and a second attempt found the disk still mounted. On the image, `slateos-install` is now the disk installer; the system tools' front end of the same name had taken the name, so the command the consoles suggest did not work. While it installs, the installer keeps the screen on and the computer awake, also with a laptop's lid closed, and writes its output to `/tmp/slateos-install.log`.
+
+Known limitations:
+
+- Only the aarch64 image has been booted and installed from, in QEMU on the development machine. The x86_64 image is evaluated in CI but has not been booted, and no installation on real hardware, nor its Wi-Fi or Bluetooth, has been tried.
+- The image is not attached to the release: it is larger than the 2 GiB GitHub allows a file. Build it on Linux with `nix build github:BenchGrid-dev/slate#iso`.
+- An encrypted installation asks for its passphrase at boot through the firmware's framebuffer or a GPU driver in the initrd. In UTM and QEMU (virtio-gpu) the prompt does not show, so do not encrypt there.
+- A Chromium-based app the agent opens in the background takes only the agent's input; your mouse and keyboard do not reach its window.
+- Some apps have no accessibility tree (WeChat); the agent uses screenshots and clicks there.
+- Codex runs under its own sandbox without Slate's approvals (Claude Code goes through them).
+- Undo covers the snapshot root, a btrfs subvolume the user owns; slated asks before deleting what it cannot restore.
+- Firefox can abort when the agent reads the accessibility tree of its session-restore page.
+- There is no graphical login screen; installs log in automatically.
+- On a slow machine the dock can show default icons at login, when it starts before the icon theme is ready.
+
+## 0.1.1 — 2026-10-19
+
+Window buttons on every title bar, and fixes from living with 0.1.0.
+
+- **Window buttons.** Every title bar has minimize, maximize and close buttons at the right, round and in the title's colour like libadwaita's (the SwayFX the module builds carries a SlateOS patch for them; sway has none). Apps that draw their own title bar, Settings and Firefox among them, show the same three: the compositor now advertises maximize and minimize to them, and handles their requests instead of ignoring them. Maximize fills the space between the menu bar and the dock and gives the window its size back when pressed again; a double click on a title bar does the same, and moving or resizing a maximized window by hand makes it an ordinary one. A minimized window waits in sway's scratchpad: its dock icon brings it back when the app has no other window on your screen.
+- The dock no longer lifts an icon under the pointer; the grey highlight stays.
+- The agent sees minimized windows as `minimized` in `desktop_windows` (they were reported as on the screen), and `desktop_focus` or `desktop_show` brings one back on your screen. When it clicks a title bar to focus a window, it keeps clear of the buttons.
+- Fix: after the agent clicked or scrolled on your screen, its cursor stayed there as a second pointer until its next action somewhere else. It now goes back to the agent's own screen once it has rested for five seconds. The desktop daemon also serves each client on its own connection, so a command-line call no longer waits behind the agent's open connection.
+- Fix: switching between dark and light, or choosing a wallpaper, showed a black screen for a moment (sway ends its background program before the new one has drawn). The new background now covers the screen before sway swaps its own.
+- Fix: in Thunar's side pane the Trash icon was smaller than the others, blurred and off-centre on HiDPI screens (Thunar drew it from the trash folder instead of the icon theme); a patch gives it the themed icon the other places use.
+
+## 0.1.0 — 2026-10-15
+
+The first milestone. SlateOS runs as a daily desktop on the development machine: you and an AI agent share the computer, the agent works through a seat and a screen of its own, and its work is approved, audited and undoable. This release marks what the 0.0.x snapshots built, and gives the desktop a finished look: rounded, shadowed, frosted windows, a dock, a menu bar, a lock screen and a session menu. Everything the agent relies on works the same on the new compositor (the e2e suites pass on it).
+
+What is in it:
+
+- **slash**, the login shell: plain language goes to the agent, `!` runs your real shell on a pty, `/` commands control the session. Claude Code and Codex backends with session resume, model choice and an identity prompt that makes the agent operate this machine rather than write code.
+- **The Slate prompt** (Super+S): one exchange at a time over whatever you are doing, approvals as buttons, a message queue with edit, steer and delete, and answers that come back when a background task finishes.
+- **The agent seat**: its own Wayland input seat, so it never moves your cursor or types into your window; its own background screen, with the AI workspace as a live view of it and `desktop_show` / `desktop_hide` to move windows between the two; applications read and driven through the accessibility tree (AT-SPI2) first and the pointer second.
+- **Task controls**: an approval broker for Claude Code's tool calls with a policy you can edit, an audit log, a btrfs snapshot before the first change of every task, scoped `/undo` with a preview, memories, and root only with your consent through a password dialog.
+- **The desktop**: a SwayFX session (rounded corners, soft shadows, frosted translucency, short animations) with a menu bar, a dock, the AI workspace, a lock screen and a session menu, dark and light themes that switch everything live, a settings app (display, sound, network, appearance, AI, memories) and an application suite (Firefox, Thunar, LibreOffice, Thunderbird, Mousepad, zathura, mpv, imv).
+- **The distribution**: a NixOS module (`services.slate.enable`), SlateOS branding and system commands (`slateos-rebuild` and friends), OS Skills kept in step with the installed version, and a live/installer image (`nix build .#iso`).
+
+Changes since 0.0.19:
+
+- **A new look.** Windows have rounded corners and soft shadows, translucent surfaces are frosted, and windows fade in and out: the session runs SwayFX 0.6 (sway 1.12 with effects; the module builds it, nixpkgs has 0.5.3, which cannot capture single windows) when `services.slate.desktop.effects` is on, the default, and falls back to plain sway if it does not start. Title bars are centred, in the apps' own header colours; GTK3 apps use adw-gtk3, icons are Colloid and the cursor Bibata Modern Classic. New wallpapers, one per appearance, follow it unless you pick your own.
+- **A dock** of its own (`slate-dock`): pinned and open apps in one row, a dot under the ones with a window on your screen, a ◆ on the ones Slate has a window of on its background screen (a click brings the window over), right-click menus and the trash. The panel is now a translucent menu bar, the launcher (Super+Space) opens like Spotlight, and notifications are frosted.
+- **Lock screen and session menu.** Super+L locks the screen: the desktop blurred, a clock, a ring that answers your typing. Super+Escape, or a right click on the menu bar's ◆, offers lock, log out, restart and shut down; before the last three it asks every window to close, so apps save their state and ask about unsaved work instead of finding at the next start that they crashed.
+- **Volume and brightness pop-up** (swayosd) for the media keys, above the dock; the brightness keys work for the desktop user.
+- **Reduce transparency** in Settings, Appearance (`slate-theme transparency reduced`): nearly opaque surfaces, for legibility and for machines without a GPU.
+- The application list is tidier (`slate-apps`, at login and after upgrades): developer tools, terminal programs and the NixOS manual are hidden, and a few apps have plain names (Files, Terminal, Document Viewer, Videos, Text Editor). Only files it wrote are touched.
+- os-release names SlateOS and its version (`SlateOS 0.1.0 (26.05)`), BenchGrid as the vendor, SlateOS's logo and links; the NixOS release stays in `VERSION_ID`, and `ID_LIKE=nixos`.
+- Fix: Firefox opened taller than the space between the menu bar and the dock, its bottom under the dock (its size was fixed in pixels for a larger screen). Firefox now opens at a share of the free area and the terminal at a size small screens fit, both centred.
+- Fix: in a terminal narrower than slash's banner, the terminal wrapped it mid-word; slash now breaks it between its notes.
+- Fix: GTK4 applications without libadwaita (Volume Control) stayed light in the dark appearance: GTK 4.22 does not infer the dark style from the portal's colour scheme. slate-theme now sets `gtk-application-prefer-dark-theme` in GTK4's `settings.ini`, keeping the rest of the file.
+- Fix: per-user copies of the desktop's files (mako, fuzzel, waybar, foot) were written once and did not follow system updates; the theme is re-applied at login.
+- Fix: the first terminal of a session opened on Slate's background screen (sway opens a window on the workspace focused when its command runs); it now opens after workspace 1 has the focus.
+- Fix: `desktop_read` right after a page loaded often returned only the browser's own buttons: Firefox shows the new title before the page's content is on the accessibility bus (more often with the effects on a machine without a GPU). Reading and listing elements now wait up to three seconds for a page on screen that is still loading or has no content yet.
+- Fix: the panel and the dock run as the supervised `slate-panel` user service, so a waybar crash (it can crash while reloading its style on a theme switch) no longer leaves the session without them until the next login.
+
+Known limitations:
+
+- Codex runs under its own sandbox without Slate's approvals (Claude Code goes through them).
+- GTK4/libadwaita applications need the user-seat fallback for pointer and keyboard input; Qt, Chromium/Electron and Flatpak applications are untested.
+- Undo covers the snapshot root, which must be a btrfs subvolume the user owns; changes outside it cannot be undone.
+- The image builds and boots, but a full installation with `slateos-install` has not been exercised end to end, and there is no graphical installer.
+- Firefox 156 aborted once right after an accessibility walk of its session-restore page; not reproduced.
+- There is no graphical login screen; installs log in automatically.
+- Without a GPU the frosted translucency costs CPU; Settings, Appearance, "Reduce transparency" turns it down.
+
+## 0.0.19 — 2026-10-04
+
+- Fix: every program the agent opened with `desktop_launch` ran inside slate-desktop.service's cgroup, so stopping or restarting the desktop daemon (an upgrade restarts it) killed all of them, including windows already handed to the user, with whatever was unsaved. Each program now runs in a systemd scope of its own (`app-slate-*.scope` in `app.slice`), and the daemon reaps programs that exit instead of leaving zombies.
+- Fix: undo restored nothing when the task had worked in a directory above the snapshot root (the prompt's tasks run in the home directory; on a machine whose snapshot root is a subvolume inside it, every scope was "outside the snapshot root"). A scope that contains the root now covers all of it, outermost scopes first so nothing is compared twice.
+- Fix: a background `desktop_launch` of an application that was already running (Firefox, Mousepad, Thunar, LibreOffice open new windows from the running process) put the window, or for Firefox a new tab, on the user's screen. Firefox now gets `--new-window` and Mousepad `--opening-mode=window`, and while a background launch is pending the daemon moves that application's new window to the background as it appears and gives the user their focus back.
+- Fix: the agent's OS Skills were linked once, to the store path of whatever version ran `slate skills install`, and never followed upgrades: skills added later (appearance, display-brightness) never reached the agent, the ones it had were out of date, and a renamed skill stayed under its old name. The NixOS module now runs `slate skills install` as a user service at login and after every upgrade, and the command removes links to skills the installed version no longer ships.
+- Fix: after slated restarted (every upgrade restarts it), a running slash, including the one behind the Slate prompt, kept its dead connection and printed "slated: Broken pipe" on every task, which then ran without approvals, audit or undo. slash now reconnects and resends the request.
+- Fix: a terminal task ended twice, so the desktop showed "Slate finished" and "Slate stopped with an error" for the same answer: slash detached from slated before reporting the end, and slated took the detach for a shell that died mid-turn. slash now reports the end first, and slated ignores a second end. The notification offers undo only when the task took a snapshot.
+- Fix: in the Slate prompt, `/undo` (and other commands answered with notes only) showed nothing: the notes went to the activity line, which the end of the command cleared. They are now the reply.
+- Fix: opening a window on the user's screen carried the agent's cursor along (sway gives a new window the focus of every seat on its workspace and warped the agent seat's cursor to it), leaving a second cursor in the middle of the new window. The desktop now sets `mouse_warping none`.
+- Fix: the agent's idle pointer sat in the middle of the user's screen as a second cursor; the desktop daemon parks it on the agent's own screen when it starts.
+- Fix: a window from a process the agent started long ago (a browser it opened from its shell an hour earlier) is the user's; only windows of processes the agent started in the last 20 seconds are moved to the background.
+- slash: answers in the terminal are styled instead of showing Markdown markers (`**bold**`, `` `code` ``, headings, fenced blocks), also when a marker arrives split across two streamed pieces.
+- Tests: the serve and slash end-to-end suites use a private config directory, so a user's "bypass approvals by default" no longer fails the approval checks.
+
+## 0.0.18 — 2026-09-29
+
+- Desktop: windows the agent opens in the background no longer flash on the user's screen first (they map straight onto the background screen). A program the agent's engine starts from the shell is moved to the background as it appears, unless `desktop_launch` asked for it on the user's screen. `desktop_focus` on a background window brings it to the user instead of pulling the user's focus onto the background screen, and the user's seat refuses to type there.
+- Panel: workspace 1 is always shown, also when it has no windows.
+- CLI: `slate-desktop type | key | click` take `--window W`.
+- Fix: focusing a window for the agent's seat clicked the middle of its title bar, which could belong to a window stacked above it; the click now lands where the window is visible, and a covered background window is moved to a free spot for that click (which raises it) and put back.
+
+## 0.0.17 — 2026-09-29
+
+- Slate prompt: messages typed while Slate works are queued under the current exchange, each with edit, send-now (steer: the current turn is interrupted and the message follows) and remove; they go out one by one as turns end. `slash --serve` gains a `cancel` op that interrupts the running agent.
+- Slate prompt: after sending, clicking another window puts the prompt away (it follows the person's focus); the colours follow `slate-theme`'s choice directly.
+- Desktop: a dock at the bottom (pinned launcher, files, browser, terminal, settings, then the open windows; click to activate, middle-click to close) and an **AI** workspace left of 1 (Super+grave or Super+0): a live, read-only view of the agent's background screen. Logging in lands on workspace 1.
+
+## 0.0.16 — 2026-09-29
+
+- Fix: with the background screen in the layout, absolute input devices (tablets, touch, a virtual machine's pointer) mapped onto the whole layout and the cursor vanished past a fraction of the visible screen. The desktop daemon maps the person's pointer, touch and tablet devices to the region the real outputs cover.
+
+## 0.0.15 — 2026-09-29
+
+- Appearance: `slate-theme dark | light | wallpaper PATH` switches the whole desktop live (GTK/libadwaita through the colour-scheme key, sway colours and background, waybar, foot, mako, fuzzel, the Slate prompt) and remembers the choice; Settings → Appearance exposes it with a file chooser; the `appearance` skill lets the agent do it.
+- Fix: the person's focus and cursor can no longer end up on the agent's background screen (the daemon pulls them back; a window mapped there at login is brought over).
+
+## 0.0.14 — 2026-09-29
+
+- The agent's own background screen: the SlateOS session runs sway with the headless backend and creates a second output nobody sees; `desktop_launch` opens windows there by default (`where: "background" | "here"`), `desktop_show` / `desktop_hide` move windows between the two screens (Super+b, panel middle click), `desktop_windows` reports each window's `location`, and the panel shows how many windows are in the background. The agent seat keeps one pointer per output. The desktop skill and slash's prompt say when to work where: results in the background, help with what the user is doing on their screen.
+
+## 0.0.13 — 2026-09-28
+
+- Live and installer image: `nix build .#iso` (`nixosConfigurations.iso-x86_64-linux` / `iso-aarch64-linux`) boots into the SlateOS desktop; `slateos-install --disk --user --host` partitions (EFI + btrfs with per-user home subvolumes), writes `/etc/slateos/configuration.nix` from a template with the full application set, and runs `nixos-install` from the image's store.
+- Root with consent: `sudo` (and `ssh`) without a terminal ask the person through `slate-askpass`, a desktop dialog; the password goes to sudo only and each use asks again. The system skill and slash's prompt tell the agent to run plain `sudo`. System changes (`slateos-rebuild switch`, package installs) are now possible from a task.
+
+## 0.0.12 — 2026-09-28
+
+- slate-desktop: the accessibility tree as the first way to see and drive applications. `desktop_elements` lists a window's interactive elements (role, name, value, states, window-relative extents, actions), `desktop_read` returns its text, `desktop_element_click` activates an element through its accessibility action and `desktop_element_set_text` edits text over the bus; both work without a pointer or keyboard and in toolkits that ignore extra seats (GTK4). Pointer and typing fallbacks otherwise. Verified on GTK3 (Thunar, pavucontrol), GTK4 (settings app) and Firefox.
+- Desktop profile: accessibility enabled for every toolkit (`services.gnome.at-spi2-core`, `toolkit-accessibility`, Qt/Firefox/Chromium switches); the daemon also turns the bus on at connect.
+- Skills: `desktop-windows` teaches elements first, pixels second.
+- Application suite: `services.slate.desktop.apps` (`full`, the default, or `minimal`). Full adds LibreOffice, Thunderbird, zathura and mpv; Mousepad and imv replace gnome-text-editor and loupe (GTK4, first-seat-only). New skills: `office-libreoffice`, `mail-thunderbird`, `pdf-zathura`, `media-mpv`, `text-mousepad`.
+
+## 0.0.11 — 2026-09-28
+
+- SlateOS system tools: `slateos-rebuild`, `slateos-option`, `slateos-install`, `slateos-generate-config`, `slateos-enter`, `slateos-version`, thin front ends for the `nixos-*` originals that use `/etc/slateos` (falling back to `/etc/nixos`). The system skill and slash's identity prompt use them. Licensing note in `distro/README.md` (nixpkgs is MIT; the NixOS name is used only descriptively).
+
+## 0.0.10 — 2026-09-28
+
+- Slate prompt: no more desktop freeze while Slate thinks. The takeover poll ran on the UI thread and could block for seconds behind a busy desktop daemon; with the overlay holding the keyboard that froze everything. The poll is off the main loop, and as soon as a prompt is sent the overlay drops to its panel-sized shape (no keyboard grab, no full-screen surface), so the agent's own clicks reach the apps and the user keeps their screen.
+- Slate prompt: live activity while working: the model's reasoning tail when the backend streams it (new `thinking` event from Claude's `thinking_delta` and Codex `reasoning` items), the current tool, and an elapsed timer in the pill.
+- Slate prompt: the card no longer draws a box-shadow (it was clipped to a hard rectangle on the panel-sized surface); MCP tool names are shown short.
+- Settings: an **AI** page: backend (Claude Code / Codex), models, sign-in status with Sign in / Sign out (runs the official CLI in a terminal), verbose log and bypass-approvals defaults, written to `~/.config/slate/slash.toml`; a button restarts the prompt to apply.
+- slash: `verbose` in `slash.toml` starts sessions in verbose mode.
+
+## 0.0.9 — 2026-09-28
+
+- SlateOS identity: os-release, boot entries, getty greeting and the default hostname say SlateOS; `ID_LIKE=nixos` is kept and skills match on it (`nixos-system` skill renamed `slateos-system`). slash introduces itself as the shell of SlateOS, built on NixOS.
+- Slate prompt (slate-shell) redone in the spirit of Siri: a pill to type into and one exchange at a time below it; Esc or clicking elsewhere dismisses it; results and approvals reappear passively without taking the keyboard; a click claims it back.
+- slate-desktop: `click` with `seat: "user"` pressed the button on the agent seat (wherever its pointer was) instead of the user's; motion and button now go through the same seat.
+- slated: tasks started from the panel are `quiet` (no desktop notifications; the panel shows progress, approvals and results itself); the "Slate is working" notification is gone for everyone (the panel button shows it).
+- Desktop theme: dark slate wallpaper (`distro/desktop/wallpaper.py`), Inter + JetBrains Mono + Font Awesome, translucent panel with icon glyphs, 1px window borders, dark GTK/libadwaita via dconf, foot/fuzzel/mako restyled.
+
+## 0.0.8 — 2026-09-28
+
+- Slate Shell: floating layer-shell panel (Mod+s / panel button) driving `slash --serve`: streamed answers, tool lines, approvals as buttons, status, takeover warning, Esc hides.
+- `slash --serve`: JSON-lines session protocol for GUI clients.
+- Takeover indicator: user-seat actions switch sway into a `controlling` mode and the panel blinks; Esc hands control back and blocks retries for a minute.
+- e2e: serve protocol suite.
+- Fixes: task records keep the user's prompt (not the context block); the panel status ignores tasks that died mid-turn.
+
+## 0.0.7 — 2026-09-28
+
+- Typing is focus-aware: `desktop_type` / `desktop_key` take a `window`, focus it for the seat in use (agent seat: title-bar click; user seat: compositor focus), verify via sway's per-seat focus, and report which window received the input. `desktop_seats` shows each seat's focus.
+- `/auto on|off` in slash: bypass approvals for the session (Confirm-tier actions run, still audited and snapshotted); ⚡ prompt marker; `auto_approve` config.
+- slash sets the terminal title (ready / working / approval needed); Slate notifications and the panel button focus the existing slash window instead of opening a new one.
+- sway IPC: GET_SEATS is type 101.
+
+## 0.0.6 — 2026-09-28
+
+- Settings app (`slate-settings`, Mod+comma or right-click the panel's Slate button): display resolution, scale and a 2x HiDPI preset with confirm-or-revert; sound, network, Slate status and memories.
+- `display-settings` skill: query, one change at a time, verify by screenshot, roll back, persist only to `~/.config/slate/sway.d/`.
+- The desktop daemon is a supervised systemd user service started by sway (auto-restart, journal logs) with the session PATH; daemons log without panicking on a closed stderr (the "broken pipe" after launching Firefox).
+- slated unit has btrfs and notify-send on PATH (snapshots had silently failed under systemd).
+- e2e: geometry checks wait for windows to settle.
+
+## 0.0.5 — 2026-09-28
+
+- slate-desktop: a long-lived `daemon` owns the agent seat for the session (apps only accept input from seats present at their start); MCP and CLI proxy to it; sway profile starts it first.
+- slate-desktop: click/type/key return a post-action screenshot; arrange positions are workspace-relative; `desktop_window_set` converges on the requested content geometry.
+- slash: installed builds resolve companion binaries via PATH and warn when a newer Slate is installed; login shell is `/run/current-system/sw/bin/slash`.
+
+## 0.0.4 — 2026-09-28
+
+- slash: plain `exit` / `quit` / `退出` leaves slash; stdin is flushed before an approval prompt so stray keys cannot turn `y` into a denial.
+- slated: command-aware dangerous-command detection (no more `op ` false positives on `$XDG_CURRENT_DESKTOP`); `/dev/null` redirects are not writes.
+- slate-desktop: `desktop_close`, `desktop_focus`, `desktop_window_set` (move/resize/fullscreen), `desktop_arrange` (side_by_side / top_bottom / grid / maximize); workspace geometry from sway.
+- Skills: `desktop-windows`.
+- e2e: window arrangement, precise placement (self-correcting), and proper closing covered; the test terminal runs bash explicitly.
+- Desktop profile: slash is the login shell for `loginShellUsers`; fallback shell defaults to bash.
+
+## 0.0.3 — 2026-09-27
+
+### slash
+- Identity and behaviour in the system prompt: it is slash, the Slate shell; answers first; no unprompted repository chatter; lets Slate handle approvals.
+- Fallback shell resolution never picks a path that does not exist (NixOS).
+
+### slated
+- Observe-tier calls that still reach the permission tool (AskUserQuestion) are allowed without asking.
+- Desktop notifications for approvals and task start/end (notify-send); `slate agent-status` for panels.
+- Memories deduplicate; instructions explain Slate memories vs Claude Code project memory.
+- Protocol robustness: error replies carry the request id, clients time out, no duplicate `id` keys (a hang in `forget`).
+
+### slate-desktop
+- Window screenshots are cropped to the compositor's window geometry, so screenshot pixels match click coordinates (CSD shadow margins).
+- ASCII text and key combos go through the standard US keymap with real keycodes (Firefox ignored text from made-up keycodes); the generated keymap is used only for non-ASCII.
+- Settle after creating a seat so heavy clients bind it before input arrives.
+
+### Desktop profile (phase 1)
+- `services.slate.desktop.enable`: sway as a stacking desktop with title bars, waybar panel (launcher, workspaces, clock, volume, network, Slate status), fuzzel, mako, wallpaper, fonts and icons, Firefox, Thunar, text editor, greeter or autologin.
+
+### Skills
+- `slate skills install` only links skills whose requirements and distro match the machine.
+
+### Tests
+- `tests/e2e/`: desktop and slash end-to-end suites with real oracles (files written, window titles, agent answers). Both pass on the dev VM.
+
+## 0.0.2 — 2026-09-27
+
+Everything since the initial skeleton. Verified end to end on NixOS 26.05 / sway 1.12 with both Claude Code and Codex.
+
+### slash
+- Natural-language shell: bare text to the agent, `/` control commands, `!` runs in your real shell, `//` escapes a leading slash.
+- `!` commands run in a pty: interactive programs work, output is captured for the agent, cwd and exported env persist.
+- Claude Code backend (stream-json, session resume, streaming text) and Codex backend (`exec --json`, thread resume).
+- Per-turn context: commands run since the previous turn (with output) and new memories travel inside the user message; static instructions in the system prompt.
+- Default model `sonnet`; `/model`, `/agent`, `/new`, `/undo`, `/audit`, `/tasks`, `/remember`, `/memories`, `/context`, `/history`, `/cd`.
+- Login-shell safe: non-interactive invocations exec the fallback shell; fallback resolution never picks a path that does not exist.
+
+### slated
+- Approval broker for Claude Code's permission tool; approvals answered at the terminal (`y` once, `a` for the task, `n` deny).
+- Tier policy (Observe / Reversible / Confirm) with a shell classifier and `~/.config/slate/policy.toml` overrides.
+- Append-only audit log; task store.
+- Privilege-free btrfs snapshots per task, diff-based `undo` with preview, snapshot pruning.
+- Memories: remember / recall / forget, deduplicated, injected into every task.
+
+### slate CLI
+- `hook pre-tool-use` / `post-tool-use`, `mcp` (approve, remember, recall, forget), `status`, `audit`, `tasks`, `undo`, `remember`, `memories`, `forget`, `skills install` / `list`.
+
+### slate-desktop
+- Agent seat on Wayland: transient seat, virtual pointer and keyboard, Unicode typing via generated keymaps, key combos.
+- Per-window and full-output capture to PNG through ext-image-copy-capture.
+- MCP tools: windows, screenshot, click, move, scroll, type, key, launch; window-relative coordinates from sway IPC.
+- `seat: "user"` fallback for toolkits that bind only the first seat (GTK4), gated as Confirm.
+
+### Distribution
+- `flake.nix` with the package and a NixOS module (`services.slate.enable`, login shell users, sway, slated user service, snapshot root).
+- Base OS Skills: audio, brightness, Wi-Fi, NixOS system, systemd, undo.
+
+### Docs
+- Architecture, roadmap, ADRs 0001–0007, policy file reference, contributing guide.
+
+## 0.0.1 — 2026-09-26
+
+Repository skeleton, architecture document, placeholder crates.

@@ -2,11 +2,14 @@
   "name": "slate-docs",
   "private": true,
   "type": "module",
-  "engines": { "node": "24.x" },
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "vocs dev",
     "build": "vocs build",
-    "preview": "vocs preview"
+    "preview": "vocs preview",
+    "postbuild": "node scripts/publish-markdown.mjs"
   },
   "dependencies": {
     "react": "19.3.1",
@@ -14,5 +17,10 @@
     "vite": "8.3.8",
     "vocs": "2.12.0",
     "waku": "1.0.0-rc.5"
+  },
+  "overrides": {
+    "remark-mdx-frontmatter": {
+      "toml": "5.0.1"
+    }
   }
 }
